@@ -25,12 +25,23 @@ class ViewController: UIViewController {
         
         return wkWebView
     }()
+    
+    private let progressView: UIProgressView = {
+        let uiProgressView = UIProgressView()
+        uiProgressView.progress = 0.0
+        uiProgressView.progressTintColor = .darkGray
+        uiProgressView.trackTintColor = .white
+        uiProgressView.translatesAutoresizingMaskIntoConstraints = false
+        
+        return uiProgressView
+    }()
 
     override func viewDidLoad() {
         super.viewDidLoad()
         
         view.backgroundColor = .white
         view.addSubview(webView)
+        view.addSubview(progressView)
         
         setupLayout()
         loadWebView()
@@ -40,13 +51,21 @@ class ViewController: UIViewController {
         if #available(iOS 11.0, *) {
             webView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor).isActive = true
             webView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor).isActive = true
+            
+            progressView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor).isActive = true
         } else {
             webView.topAnchor.constraint(equalTo: topLayoutGuide.bottomAnchor).isActive = true
             webView.bottomAnchor.constraint(equalTo: view.bottomAnchor).isActive = true
+            
+            progressView.topAnchor.constraint(equalTo: topLayoutGuide.bottomAnchor).isActive = true
         }
         
         webView.leadingAnchor.constraint(equalTo: view.leadingAnchor).isActive = true
         webView.trailingAnchor.constraint(equalTo: view.trailingAnchor).isActive = true
+        
+        progressView.heightAnchor.constraint(equalToConstant: 3.0).isActive = true
+        progressView.leadingAnchor.constraint(equalTo: view.leadingAnchor).isActive = true
+        progressView.trailingAnchor.constraint(equalTo: view.trailingAnchor).isActive = true
     }
     
     private func loadWebView() {
@@ -56,6 +75,19 @@ class ViewController: UIViewController {
             let request = URLRequest(url: url)
             
             webView.load(request)
+            webView.addObserver(self, forKeyPath: #keyPath(WKWebView.estimatedProgress), options: .new, context: nil)
+        }
+    }
+    
+    override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
+        if keyPath == "estimatedProgress" {
+            progressView.progress = Float(webView.estimatedProgress)
+        }
+        
+        if (progressView.progress >= 1.0) {
+            progressView.alpha = 0.0
+        }else {
+            progressView.alpha = 1.0
         }
     }
 
