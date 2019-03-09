@@ -35,6 +35,8 @@ class ViewController: UIViewController {
         
         return uiProgressView
     }()
+    
+    private let refreshControl = UIRefreshControl()
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -44,6 +46,8 @@ class ViewController: UIViewController {
         view.addSubview(progressView)
         
         setupLayout()
+        setupPullToRefresh()
+        
         loadWebView()
     }
     
@@ -89,6 +93,17 @@ class ViewController: UIViewController {
         }else {
             progressView.alpha = 1.0
         }
+    }
+    
+    private func setupPullToRefresh() {
+        webView.scrollView.bounces = true
+        webView.scrollView.addSubview(refreshControl)
+        refreshControl.addTarget(self, action: #selector(refreshWebView), for: .valueChanged)
+    }
+    
+    @objc private func refreshWebView() {
+        webView.reload()
+        refreshControl.endRefreshing()
     }
 
 }
