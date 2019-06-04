@@ -13,7 +13,7 @@ class ViewController: UIViewController {
     
     private let website = "https://hisman.co"
     
-    private let webView: WKWebView = {
+    private lazy var webView: WKWebView = {
         let webConfiguration = WKWebViewConfiguration()
         let wkWebView = WKWebView(frame: .zero, configuration: webConfiguration)
         
@@ -26,7 +26,7 @@ class ViewController: UIViewController {
         return wkWebView
     }()
     
-    private let progressView: UIProgressView = {
+    private lazy var progressView: UIProgressView = {
         let uiProgressView = UIProgressView()
         uiProgressView.progress = 0.0
         uiProgressView.progressTintColor = .darkGray
@@ -36,14 +36,15 @@ class ViewController: UIViewController {
         return uiProgressView
     }()
     
-    private let refreshControl = UIRefreshControl()
+    private lazy var refreshControl:UIRefreshControl = {
+        let uiRefreshControl = UIRefreshControl()
+        uiRefreshControl.addTarget(self, action: #selector(refreshWebView), for: .valueChanged)
+        
+        return uiRefreshControl
+    }()
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        
-        view.backgroundColor = .white
-        view.addSubview(webView)
-        view.addSubview(progressView)
         
         setupLayout()
         setupPullToRefresh()
@@ -52,6 +53,10 @@ class ViewController: UIViewController {
     }
     
     private func setupLayout() {
+        view.backgroundColor = .white
+        view.addSubview(webView)
+        view.addSubview(progressView)
+        
         if #available(iOS 11.0, *) {
             webView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor).isActive = true
             webView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor).isActive = true
@@ -73,9 +78,7 @@ class ViewController: UIViewController {
     }
     
     private func loadWebView() {
-        let url = URL(string: website)
-        
-        if let url = url {
+        if let url = URL(string: website) {
             let request = URLRequest(url: url)
             
             webView.load(request)
@@ -98,7 +101,6 @@ class ViewController: UIViewController {
     private func setupPullToRefresh() {
         webView.scrollView.bounces = true
         webView.scrollView.addSubview(refreshControl)
-        refreshControl.addTarget(self, action: #selector(refreshWebView), for: .valueChanged)
     }
     
     @objc private func refreshWebView() {
