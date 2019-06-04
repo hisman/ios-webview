@@ -13,6 +13,8 @@ class ViewController: UIViewController {
     
     private let website = "https://hisman.co"
     
+    // MARK: - Views
+    
     private lazy var webView: WKWebView = {
         let webConfiguration = WKWebViewConfiguration()
         let wkWebView = WKWebView(frame: .zero, configuration: webConfiguration)
@@ -42,20 +44,25 @@ class ViewController: UIViewController {
         
         return uiRefreshControl
     }()
+    
+    // MARK: - View Controller Lifecycle
 
     override func viewDidLoad() {
         super.viewDidLoad()
         
         setupLayout()
-        setupPullToRefresh()
-        
         loadWebView()
     }
+    
+    // MARK: - Setup Webview
     
     private func setupLayout() {
         view.backgroundColor = .white
         view.addSubview(webView)
         view.addSubview(progressView)
+        
+        webView.scrollView.bounces = true
+        webView.scrollView.addSubview(refreshControl)
         
         if #available(iOS 11.0, *) {
             webView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor).isActive = true
@@ -98,10 +105,7 @@ class ViewController: UIViewController {
         }
     }
     
-    private func setupPullToRefresh() {
-        webView.scrollView.bounces = true
-        webView.scrollView.addSubview(refreshControl)
-    }
+    // MARK: - Actions
     
     @objc private func refreshWebView() {
         webView.reload()
