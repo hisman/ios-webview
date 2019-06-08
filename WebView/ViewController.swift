@@ -9,7 +9,7 @@
 import UIKit
 import WebKit
 
-class ViewController: UIViewController {
+class ViewController: UIViewController, WKNavigationDelegate {
     
     private let website = "https://hisman.co"
     
@@ -21,9 +21,12 @@ class ViewController: UIViewController {
         
         wkWebView.isOpaque = false
         wkWebView.backgroundColor = .white
+        wkWebView.navigationDelegate = self
+        wkWebView.scrollView.bounces = true
         wkWebView.allowsLinkPreview = false
         wkWebView.allowsBackForwardNavigationGestures = true
         wkWebView.translatesAutoresizingMaskIntoConstraints = false
+        wkWebView.addObserver(self, forKeyPath: #keyPath(WKWebView.estimatedProgress), options: .new, context: nil)
         
         return wkWebView
     }()
@@ -38,11 +41,34 @@ class ViewController: UIViewController {
         return uiProgressView
     }()
     
-    private lazy var refreshControl:UIRefreshControl = {
+    private lazy var refreshControl: UIRefreshControl = {
         let uiRefreshControl = UIRefreshControl()
         uiRefreshControl.addTarget(self, action: #selector(refreshWebView), for: .valueChanged)
         
         return uiRefreshControl
+    }()
+    
+    private lazy var errorLabel: UILabel = {
+        let label = UILabel()
+        label.numberOfLines = 0
+        label.lineBreakMode = .byWordWrapping
+        label.textAlignment = .center
+        label.font = .systemFont(ofSize: 30)
+        label.isHidden = true
+        label.translatesAutoresizingMaskIntoConstraints = false
+        
+        return label
+    }()
+    
+    private lazy var reloadBtn: UIButton = {
+        let button = UIButton(type: .system)
+        button.isHidden = true
+        button.setTitle("Reload", for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 20)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.addTarget(self, action: #selector(refreshWebView), for: .touchUpInside)
+        
+        return button
     }()
     
     // MARK: - View Controller Lifecycle
@@ -54,44 +80,49 @@ class ViewController: UIViewController {
         loadWebView()
     }
     
-    // MARK: - Setup Webview
+    // MARK: - Setup WebView
     
     private func setupLayout() {
         view.backgroundColor = .white
         view.addSubview(webView)
         view.addSubview(progressView)
+        view.addSubview(errorLabel)
+        view.addSubview(reloadBtn)
         
-        webView.scrollView.bounces = true
         webView.scrollView.addSubview(refreshControl)
         
         if #available(iOS 11.0, *) {
-            webView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor).isActive = true
-            webView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor).isActive = true
+            NSLayoutConstraint.activate([
+                webView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+                webView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+                progressView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+                errorLabel.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 20),
+                errorLabel.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
+            ])
             
-            progressView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor).isActive = true
         } else {
-            webView.topAnchor.constraint(equalTo: topLayoutGuide.bottomAnchor).isActive = true
-            webView.bottomAnchor.constraint(equalTo: view.bottomAnchor).isActive = true
-            
-            progressView.topAnchor.constraint(equalTo: topLayoutGuide.bottomAnchor).isActive = true
+            NSLayoutConstraint.activate([
+                webView.topAnchor.constraint(equalTo: topLayoutGuide.bottomAnchor),
+                webView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+                progressView.topAnchor.constraint(equalTo: topLayoutGuide.bottomAnchor),
+                errorLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+                errorLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            ])
         }
         
-        webView.leadingAnchor.constraint(equalTo: view.leadingAnchor).isActive = true
-        webView.trailingAnchor.constraint(equalTo: view.trailingAnchor).isActive = true
-        
-        progressView.heightAnchor.constraint(equalToConstant: 3.0).isActive = true
-        progressView.leadingAnchor.constraint(equalTo: view.leadingAnchor).isActive = true
-        progressView.trailingAnchor.constraint(equalTo: view.trailingAnchor).isActive = true
+        NSLayoutConstraint.activate([
+            webView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            webView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            progressView.heightAnchor.constraint(equalToConstant: 3.0),
+            progressView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            progressView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            errorLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor, constant: -20),
+            reloadBtn.topAnchor.constraint(equalTo: errorLabel.bottomAnchor, constant: 20),
+            reloadBtn.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+        ])
     }
     
-    private func loadWebView() {
-        if let url = URL(string: website) {
-            let request = URLRequest(url: url)
-            
-            webView.load(request)
-            webView.addObserver(self, forKeyPath: #keyPath(WKWebView.estimatedProgress), options: .new, context: nil)
-        }
-    }
+    // MARK: - Actions
     
     override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
         if keyPath == "estimatedProgress" {
@@ -105,11 +136,36 @@ class ViewController: UIViewController {
         }
     }
     
-    // MARK: - Actions
+    private func loadWebView() {
+        if let url = URL(string: website) {
+            let request = URLRequest(url: url)
+            webView.load(request)
+        }
+    }
     
     @objc private func refreshWebView() {
-        webView.reload()
+        if webView.url == nil {
+            loadWebView()
+        }else {
+            webView.reload()
+        }
+        
         refreshControl.endRefreshing()
+    }
+    
+    // MARK: - WKNavigation Delegate
+    
+    func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+        errorLabel.isHidden = true
+        reloadBtn.isHidden = true
+    }
+    
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        if webView.url == nil {
+            errorLabel.text = error.localizedDescription
+            errorLabel.isHidden = false
+            reloadBtn.isHidden = false
+        }
     }
 
 }
