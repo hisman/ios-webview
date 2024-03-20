@@ -11,7 +11,7 @@ import WebKit
 
 class ViewController: UIViewController, WKNavigationDelegate {
     
-    private let website = "https://hisman.co"
+    private let website = "https://hisman.org"
     
     // MARK: - Views
     
